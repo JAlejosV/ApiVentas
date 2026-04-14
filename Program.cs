@@ -129,21 +129,52 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-//Importante para habilitar que se  exponga el directorio de imagenes
-//Sin esto no se puede acceder
+////Importante para habilitar que se  exponga el directorio de imagenes
+////Sin esto no se puede acceder
+//app.UseStaticFiles(new StaticFileOptions()
+//{
+//    FileProvider = new PhysicalFileProvider(Path.Combine(Directory.GetCurrentDirectory(), @"ImagenesPosts")),
+//    RequestPath = new PathString("/ImagenesPosts")
+//});
+
+////Directorio para archivos de proveedores
+//app.UseStaticFiles(new StaticFileOptions()
+//{
+//    FileProvider = new PhysicalFileProvider(Path.Combine(Directory.GetCurrentDirectory(), @"wwwroot\archivos")),
+//    RequestPath = new PathString("/archivos")
+//});
+// ✅ AGREGAR ESTO: Crear directorios si no existen (necesario en Railway)
+var imagenesPath = Path.Combine(Directory.GetCurrentDirectory(), "ImagenesPosts");
+var archivosPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "archivos");
+
+//Para Raily
+if (!Directory.Exists(imagenesPath))
+    Directory.CreateDirectory(imagenesPath);
+
+if (!Directory.Exists(archivosPath))
+    Directory.CreateDirectory(archivosPath);
+
+// Configure the HTTP request pipeline.
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+
+// ✅ CAMBIO: Usar las variables en lugar de rutas hardcodeadas con @"..."
 app.UseStaticFiles(new StaticFileOptions()
 {
-    FileProvider = new PhysicalFileProvider(Path.Combine(Directory.GetCurrentDirectory(), @"ImagenesPosts")),
+    FileProvider = new PhysicalFileProvider(imagenesPath),
     RequestPath = new PathString("/ImagenesPosts")
 });
 
-//Directorio para archivos de proveedores
+// ✅ CAMBIO: Usar Path.Combine en lugar de backslash \ (falla en Linux)
 app.UseStaticFiles(new StaticFileOptions()
 {
-    FileProvider = new PhysicalFileProvider(Path.Combine(Directory.GetCurrentDirectory(), @"wwwroot\archivos")),
+    FileProvider = new PhysicalFileProvider(archivosPath),
     RequestPath = new PathString("/archivos")
 });
-
+//Fin Raily
 
 //Soporte para CORS
 app.UseCors("PolicyCors");

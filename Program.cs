@@ -16,7 +16,7 @@ var builder = WebApplication.CreateBuilder(args);
 //Configuramos la conexion a PostgreSQL
 builder.Services.AddDbContext<ApplicationDbContext>(opciones =>
 {
-    opciones.UseNpgsql(builder.Configuration.GetConnectionString("ConexionSql"), 
+    opciones.UseNpgsql(builder.Configuration.GetConnectionString("ConexionSql"),
         options => options.EnableRetryOnFailure())
         .EnableSensitiveDataLogging(); // Solo para desarrollo
 });
@@ -49,15 +49,15 @@ builder.Services.AddAutoMapper(typeof(BlogMapper));
 //Aqu� se configura la Autenticaci�n - Primera parte
 builder.Services.AddAuthentication(x =>
 {
-    x.DefaultAuthenticateScheme= JwtBearerDefaults.AuthenticationScheme;
-    x.DefaultChallengeScheme= JwtBearerDefaults.AuthenticationScheme;
+    x.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    x.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
 }).AddJwtBearer(x =>
 {
-    x.RequireHttpsMetadata= false;
+    x.RequireHttpsMetadata = false;
     x.SaveToken = true;
     x.TokenValidationParameters = new TokenValidationParameters
     {
-        ValidateIssuerSigningKey= true,
+        ValidateIssuerSigningKey = true,
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(key)),
         ValidateIssuer = false,
         ValidateAudience = false
@@ -123,11 +123,11 @@ builder.Services.AddCors(p => p.AddPolicy("PolicyCors", build =>
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+//if (app.Environment.IsDevelopment())
+//{
+app.UseSwagger();
+app.UseSwaggerUI();
+//}
 
 ////Importante para habilitar que se  exponga el directorio de imagenes
 ////Sin esto no se puede acceder

@@ -12,7 +12,10 @@ using Microsoft.OpenApi.Models;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
-
+//Inicio Railway 
+var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
+builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+//Fin Railway
 //Configuramos la conexion a PostgreSQL
 builder.Services.AddDbContext<ApplicationDbContext>(opciones =>
 {
@@ -123,12 +126,15 @@ builder.Services.AddCors(p => p.AddPolicy("PolicyCors", build =>
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
+//Inicio Railway 
 //if (app.Environment.IsDevelopment())
 //{
 app.UseSwagger();
 app.UseSwaggerUI();
 //}
+//Fin Railway 
 
+//Imagenes Locales
 ////Importante para habilitar que se  exponga el directorio de imagenes
 ////Sin esto no se puede acceder
 //app.UseStaticFiles(new StaticFileOptions()
@@ -147,7 +153,7 @@ app.UseSwaggerUI();
 var imagenesPath = Path.Combine(Directory.GetCurrentDirectory(), "ImagenesPosts");
 var archivosPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "archivos");
 
-//Para Raily
+//Inicio Raily
 if (!Directory.Exists(imagenesPath))
     Directory.CreateDirectory(imagenesPath);
 

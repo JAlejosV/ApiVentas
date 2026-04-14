@@ -1,0 +1,300 @@
+// Ejemplo de configuración en Program.cs para implementar las mejores prácticas
+
+using ApiVentas.Data;
+using ApiVentas.Mappers;
+using ApiVentas.Middleware;
+using ApiVentas.Repositorio;
+using ApiVentas.Repositorio.IRepositorio;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
+using System.Text;
+using System.Text.Json;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// 1. Configurar DbContext para PostgreSQL
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+{
+    options.UseNpgsql(builder.Configuration.GetConnectionString("ConexionSql"));
+});
+
+// 2. Configurar servicios de repositorio
+builder.Services.AddScoped<IProductoRepositorio, ProductoRepositorio>();
+builder.Services.AddScoped<IUsuarioRepositorio, UsuarioRepositorio>();
+// ... otros repositorios
+
+// 3. Configurar AutoMapper
+builder.Services.AddAutoMapper(typeof(BlogMapper));
+
+// 4. Configurar autenticación JWT
+var secretKey = builder.Configuration.GetValue<string>("ApiSettings:Secreta");
+var keyBytes = Encoding.ASCII.GetBytes(secretKey);
+
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.RequireHttpsMetadata = false; // Solo para desarrollo
+    options.SaveToken = true;
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(keyBytes),
+        ValidateIssuer = false,
+        ValidateAudience = false,
+        ValidateLifetime = true,
+        ClockSkew = TimeSpan.Zero // Eliminar margen de tiempo para expiración
+    };
+});
+
+// 5. Configurar controladores con opciones JSON
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        // Configurar nombres de propiedades en camelCase
+        options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+        
+        // Configurar formato de fechas
+        options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+        
+        // Manejar referencias circulares
+        options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+        
+        // Indentación para mejor legibilidad en desarrollo
+        options.JsonSerializerOptions.WriteIndented = builder.Environment.IsDevelopment();
+    });
+
+// 6. Configurar versionado de API
+builder.Services.AddApiVersioning(options =>
+{
+    options.AssumeDefaultVersionWhenUnspecified = true;
+    options.DefaultApiVersion = new Microsoft.AspNetCore.Mvc.ApiVersion(1, 0);
+    options.ApiVersionReader = Microsoft.AspNetCore.Mvc.ApiVersionReader.Combine(
+        new Microsoft.AspNetCore.Mvc.QueryStringApiVersionReader("version"),
+        new Microsoft.AspNetCore.Mvc.HeaderApiVersionReader("X-Api-Version"),
+        new Microsoft.AspNetCore.Mvc.UrlSegmentApiVersionReader()
+    );
+});
+
+// 7. Configurar Swagger con autenticación
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "API Ventas - Sistema de Gestión",
+        Version = "v1",
+        Description = "API RESTful para gestión de ventas, productos y proveedores",
+        Contact = new OpenApiContact
+        {
+            Name = "Soporte Técnico",
+            Email = "soporte@example.com"
+        }
+    });
+
+    // Configurar autenticación JWT en Swagger
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Description = "Autenticación JWT usando el esquema Bearer. Ingrese 'Bearer' seguido de un espacio y el token JWT.",
+        Name = "Authorization",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.ApiKey,
+        Scheme = "Bearer",
+        BearerFormat = "JWT"
+    });
+
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+
+    // Incluir comentarios XML
+    var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+    if (File.Exists(xmlPath))
+    {
+        options.IncludeXmlComments(xmlPath);
+    }
+});
+
+// 8. Configurar CORS
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("ApiCorsPolicy", policy =>
+    {
+        policy.WithOrigins(
+                "http://localhost:3000",  // React
+                "http://localhost:4200",  // Angular
+                "http://localhost:8080"   // Vue
+            )
+            .AllowAnyMethod()
+            .AllowAnyHeader()
+            .AllowCredentials();
+    });
+});
+
+// 9. Configurar rate limiting (opcional)
+builder.Services.AddRateLimiter(options =>
+{
+    options.GlobalLimiter = System.Threading.RateLimiting.PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
+        System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.User.Identity?.Name ?? httpContext.Request.Headers.Host.ToString(),
+            factory: partition => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions
+            {
+                AutoReplenishment = true,
+                PermitLimit = 100,
+                Window = TimeSpan.FromMinutes(1)
+            }));
+});
+
+// 10. Configurar logging
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
+builder.Logging.AddDebug();
+
+var app = builder.Build();
+
+// 11. Configurar pipeline de middlewares
+
+// Middleware global de manejo de errores (debe ir primero)
+app.UseGlobalErrorHandling();
+
+// Rate limiting
+app.UseRateLimiter();
+
+// Swagger solo en desarrollo
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "API Ventas v1");
+        options.RoutePrefix = string.Empty; // Swagger en la raíz
+        options.DocumentTitle = "API Ventas - Documentación";
+        
+        // Configurar interfaz
+        options.DefaultModelsExpandDepth(-1); // Ocultar modelos por defecto
+        options.DisplayRequestDuration();
+        options.EnableDeepLinking();
+        options.EnableFilter();
+        options.ShowExtensions();
+        options.EnableValidator();
+    });
+}
+
+// HTTPS redirection
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
+
+// Servir archivos estáticos
+app.UseStaticFiles();
+
+// CORS
+app.UseCors("ApiCorsPolicy");
+
+// Autenticación y autorización
+app.UseAuthentication();
+app.UseAuthorization();
+
+// Routing
+app.UseRouting();
+
+// Mapear controladores
+app.MapControllers();
+
+// Health check endpoint
+app.MapGet("/health", () => Results.Ok(new
+{
+    status = "Healthy",
+    timestamp = DateTime.UtcNow,
+    version = "1.0.0",
+    environment = app.Environment.EnvironmentName
+}));
+
+// Información de la API
+app.MapGet("/info", () => Results.Ok(new
+{
+    name = "API Ventas",
+    version = "1.0.0",
+    description = "Sistema de gestión de ventas, productos y proveedores",
+    documentation = "/swagger",
+    endpoints = new
+    {
+        auth = "/api/v1/auth",
+        productos = "/api/v1/productos",
+        proveedores = "/api/v1/proveedores",
+        almacenes = "/api/v1/almacenes"
+    }
+}));
+
+app.Run();
+
+/*
+CONFIGURACIONES ADICIONALES RECOMENDADAS:
+
+1. appsettings.json:
+{
+  "ConnectionStrings": {
+    "ConexionSql": "Host=localhost;Port=5432;Database=ventas-alejos-db;Username=jalejosv;Password=Sistemas1"
+  },
+  "ApiSettings": {
+    "Secreta": "tu-clave-secreta-muy-segura-de-al-menos-32-caracteres"
+  },
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning",
+      "Microsoft.EntityFrameworkCore": "Warning"
+    }
+  },
+  "AllowedHosts": "*"
+}
+
+2. Para generar documentación XML, agregar a .csproj:
+<PropertyGroup>
+  <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  <NoWarn>$(NoWarn);1591</NoWarn>
+</PropertyGroup>
+
+3. Variables de entorno para producción:
+- CONNECTION_STRING
+- JWT_SECRET_KEY
+- ASPNETCORE_ENVIRONMENT=Production
+
+4. Para usar HTTPS en producción:
+- Configurar certificados SSL
+- Habilitar HSTS
+- Usar UseHttpsRedirection()
+
+5. Para logging avanzado:
+- Serilog
+- Application Insights
+- ELK Stack
+
+6. Para caché:
+- Redis
+- Memory Cache
+- Response Caching
+
+7. Para monitoreo:
+- Health Checks
+- Metrics
+- Application Performance Monitoring (APM)
+*/

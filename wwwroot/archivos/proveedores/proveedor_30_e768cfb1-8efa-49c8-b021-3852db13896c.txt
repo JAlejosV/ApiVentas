@@ -1,0 +1,23 @@
+1. Donde vives exactamente?
+2. Sabes usar laptop?
+3. Edad?
+4. Tienes experiencia en ventas o atencion al cliente?
+5. Eres casada o conviviendo?
+6. Tienes hijos?
+
+**************************************
+
+El trabajo consiste en la venta de gaseosas, cervezas, golosinas,etc. Frente al polideportivo de San Carlos.
+
+1. Turnos y horarios:
+	1.1. Turno día:
+		- Horario: 9:00 a.m. - 4 p.m.
+		- Sueldo diario: S/25
+	1.2. Turno tarde:
+		- Horario: 4 p.m. - 11:00 p.m.
+		- Sueldo diario: S/25
+2. Pago quincenal.
+3. Se pagan horas extras.
+
+Pero tambien hay dias que se debe trabajar intercalando turnos o todo el dia con el sueldo de S/50.00.
+

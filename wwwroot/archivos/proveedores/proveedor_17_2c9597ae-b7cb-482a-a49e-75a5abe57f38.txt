@@ -1,0 +1,33 @@
+function copiarRVs() {
+  // ID de carpetas (reemplaza con los tuyos)
+  const origenId = "1uP6ZD3pqFXInk8z0UXaDFughmmWnO7MW";
+  const destinoId = "1QwGzsfL7CPdQMJtRjYXO3HN57C1u_C3f";
+
+  const carpetaOrigen = DriveApp.getFolderById(origenId);
+  const carpetaDestino = DriveApp.getFolderById(destinoId);
+
+  // Fecha de ayer en formato YYYYMMDD
+  const ayer = new Date();
+  ayer.setDate(ayer.getDate() - 1);
+  const y = ayer.getFullYear();
+  const m = ("0" + (ayer.getMonth() + 1)).slice(-2);
+  const d = ("0" + ayer.getDate()).slice(-2);
+  const fechaStr = `${y}${m}${d}`;
+
+  // Archivos que queremos copiar
+  const nombres = ["RV1", "RV2"];
+
+  nombres.forEach(function(nombreBase) {
+    // Buscar archivos con ese nombre en la carpeta origen
+    const archivos = carpetaOrigen.getFilesByName(nombreBase);
+
+    while (archivos.hasNext()) {
+      const archivo = archivos.next();
+
+      // Copia del archivo
+      const copia = archivo.makeCopy(`${nombreBase}_${fechaStr}`, carpetaDestino);
+
+      console.log(`Copiado: ${archivo.getName()} → ${copia.getName()}`);
+    }
+  });
+}

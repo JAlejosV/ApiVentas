@@ -38,8 +38,8 @@ namespace ApiVentas.Controllers
         [HttpPost("comparar")]
         [PermissionRequired("Inventario", "Comparar")]
         public IActionResult Comparar(
-            [FromForm] List<IFormFile> archivosInventarioFisico,
-            [FromForm] IFormFile archivoInventarioSistema,
+            List<IFormFile> archivosInventarioFisico,
+            IFormFile archivoInventarioSistema,
             [FromForm] decimal? montoCuadre = null)
         {
             var todosLosErrores = new List<string>();
@@ -75,8 +75,8 @@ namespace ApiVentas.Controllers
         [HttpPost("exportar")]
         [PermissionRequired("Inventario", "Exportar")]
         public IActionResult Exportar(
-            [FromForm] List<IFormFile> archivosInventarioFisico,
-            [FromForm] IFormFile archivoInventarioSistema,
+            List<IFormFile> archivosInventarioFisico,
+            IFormFile archivoInventarioSistema,
             [FromForm] decimal? montoCuadre = null)
         {
             var todosLosErrores = new List<string>();

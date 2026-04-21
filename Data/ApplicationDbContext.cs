@@ -26,6 +26,7 @@ namespace ApiVentas.Data
         public DbSet<ProductoProveedor> ProductoProveedor { get; set; }
         public DbSet<Producto> Producto { get; set; }
         public DbSet<Estado> Estado { get; set; }
+        public DbSet<UnidadMedida> UnidadMedida { get; set; }
         public DbSet<Almacen> Almacen { get; set; }
         public DbSet<Pedido> Pedido { get; set; }
         public DbSet<PedidoArchivo> PedidoArchivo { get; set; }
@@ -68,6 +69,7 @@ namespace ApiVentas.Data
                 entity.ToTable("usuario");
                 entity.HasKey(e => e.IdUsuario);
                 entity.Property(e => e.IdUsuario).HasColumnName("id_usuario");
+                entity.Property(e => e.CodigoEquivalencia).HasColumnName("codigo_equivalencia");
                 entity.Property(e => e.NombreCompleto).HasColumnName("nombre_completo").HasMaxLength(200);
                 entity.Property(e => e.Correo).HasColumnName("correo").HasMaxLength(200);
                 entity.Property(e => e.PasswordHash).HasColumnName("password_hash");
@@ -202,6 +204,16 @@ namespace ApiVentas.Data
                 entity.Property(e => e.NombreEstado).HasColumnName("nombreestado");
                 entity.Property(e => e.DescripcionEstado).HasColumnName("descripcionestado");
                 entity.Property(e => e.EstadoRegistro).HasColumnName("estadoregistro");
+            });
+
+            modelBuilder.Entity<UnidadMedida>(entity =>
+            {
+                entity.ToTable("unidadmedida");
+                entity.HasKey(e => e.IdUnidadMedida);
+                entity.Property(e => e.IdUnidadMedida).HasColumnName("idunidadmedida");
+                entity.Property(e => e.CodigoUnidadMedida).HasColumnName("codigounidadmedida").HasMaxLength(10);
+                entity.Property(e => e.NombreUnidadMedida).HasColumnName("nombreunidadmedida").HasMaxLength(100);
+                entity.Property(e => e.EstadoRegistro).HasColumnName("estadoregistro").HasDefaultValue(true);
             });
 
             modelBuilder.Entity<ProveedorArchivo>(entity =>

@@ -68,6 +68,14 @@ namespace ApiVentas.Repositorio
             return await _context.SaveChangesAsync() > 0;
         }
 
+        public async Task<List<UsuarioSistema>> ObtenerUsuariosActivosAsync()
+        {
+            return await _context.UsuarioSistema
+                .Where(u => u.EstadoRegistro)
+                .OrderBy(u => u.NombreCompleto)
+                .ToListAsync();
+        }
+
         public async Task<bool> EliminarUsuarioAsync(int id)
         {
             var usuario = await _context.UsuarioSistema.FindAsync(id);

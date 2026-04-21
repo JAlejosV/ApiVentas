@@ -8,13 +8,13 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 //Inicio Railway 
-var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
-builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+//var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
+//builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 //Fin Railway
 //Configuramos la conexion a PostgreSQL
 builder.Services.AddDbContext<ApplicationDbContext>(opciones =>
@@ -36,6 +36,9 @@ builder.Services.AddScoped<IProveedorArchivoRepositorio, ProveedorArchivoReposit
 builder.Services.AddScoped<IProductoProveedorRepositorio, ProductoProveedorRepositorio>();
 builder.Services.AddScoped<IProductoRepositorio, ProductoRepositorio>();
 builder.Services.AddScoped<IEstadoRepositorio, EstadoRepositorio>();
+builder.Services.AddScoped<IUnidadMedidaRepositorio, UnidadMedidaRepositorio>();
+builder.Services.Configure<MariaDbSettings>(builder.Configuration.GetSection("MariaDb"));
+builder.Services.AddScoped<IReporteRepositorio, ReporteRepositorio>();
 builder.Services.AddScoped<IAlmacenRepositorio, AlmacenRepositorio>();
 builder.Services.AddScoped<IPedidoRepositorio, PedidoRepositorio>();
 builder.Services.AddScoped<IPedidoDetalleAlmacenRepositorio, PedidoDetalleAlmacenRepositorio>();
@@ -78,37 +81,23 @@ builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(optio
 builder.Services.AddControllers().AddNewtonsoftJson();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+
 
 //Aqu� se configura la autenticaci�n y autorizaci�n segunda parte
 builder.Services.AddSwaggerGen(options =>
 {
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
-        Description =
-        "Autenticaci�n JWT usando el esquema Bearer. \r\n\r\n " +
-        "Ingresa la palabra 'Bearer' seguida de un [espacio] y despues su token en el campo de abajo \r\n\r\n" +
-        "Ejemplo: \"Bearer tkdknkdllskd\"",
+        Description = "Ingresa tu token JWT. No incluyas el prefijo 'Bearer', Swagger lo agrega automáticamente.",
         Name = "Authorization",
         In = ParameterLocation.Header,
-        Scheme = "Bearer"
+        Scheme = "Bearer",
+        Type = SecuritySchemeType.Http,
+        BearerFormat = "JWT"
     });
-    options.AddSecurityRequirement(new OpenApiSecurityRequirement()
+    options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
     {
-        {
-            new OpenApiSecurityScheme
-            {
-                Reference = new OpenApiReference
-                            {
-                                Type = ReferenceType.SecurityScheme,
-                                Id = "Bearer"
-                            },
-                Scheme = "oauth2",
-                Name = "Bearer",
-                In = ParameterLocation.Header
-            },
-            new List<string>()
-        }
+        [new OpenApiSecuritySchemeReference("Bearer", document)] = []
     });
     options.OperationFilter<MultiFileUploadOperationFilter>();
 });

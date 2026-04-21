@@ -7,6 +7,8 @@ namespace ApiVentas.Modelos
         [Key]
         public int IdUsuario { get; set; }
         
+        public int? CodigoEquivalencia { get; set; }
+        
         [Required]
         [StringLength(200)]
         public string NombreCompleto { get; set; }

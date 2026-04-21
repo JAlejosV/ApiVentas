@@ -79,6 +79,7 @@ namespace ApiVentas.Controllers
                 var usuarioInfo = new UsuarioInfoDto
                 {
                     Id = usuario.IdUsuario,
+                    CodigoEquivalencia = usuario.CodigoEquivalencia,
                     NombreCompleto = usuario.NombreCompleto,
                     Correo = usuario.Correo,
                     EstadoRegistro = usuario.EstadoRegistro,
@@ -205,6 +206,7 @@ namespace ApiVentas.Controllers
                 var usuarioInfo = new UsuarioInfoDto
                 {
                     Id = usuarioCreado.IdUsuario,
+                    CodigoEquivalencia = usuarioCreado.CodigoEquivalencia,
                     NombreCompleto = usuarioCreado.NombreCompleto,
                     Correo = usuarioCreado.Correo,
                     EstadoRegistro = usuarioCreado.EstadoRegistro,
@@ -286,6 +288,7 @@ namespace ApiVentas.Controllers
                 var usuarioInfo = new UsuarioInfoDto
                 {
                     Id = usuario.IdUsuario,
+                    CodigoEquivalencia = usuario.CodigoEquivalencia,
                     NombreCompleto = usuario.NombreCompleto,
                     Correo = usuario.Correo,
                     EstadoRegistro = usuario.EstadoRegistro,

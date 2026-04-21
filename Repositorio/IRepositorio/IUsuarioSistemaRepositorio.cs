@@ -13,6 +13,7 @@ namespace ApiVentas.Repositorio.IRepositorio
         Task<UsuarioSistema> CrearUsuarioAsync(UsuarioSistema usuario);
         Task<UsuarioSistema> ObtenerUsuarioPorIdAsync(int id);
         Task<UsuarioSistema> ObtenerUsuarioPorCorreoAsync(string correo);
+        Task<List<UsuarioSistema>> ObtenerUsuariosActivosAsync();
         Task<bool> ActualizarUsuarioAsync(UsuarioSistema usuario);
         Task<bool> EliminarUsuarioAsync(int id);
         

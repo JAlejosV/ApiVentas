@@ -3,6 +3,7 @@ namespace ApiVentas.Modelos.Dtos
     public class UsuarioInfoDto
     {
         public int Id { get; set; }
+        public int? CodigoEquivalencia { get; set; }
         public string NombreCompleto { get; set; }
         public string Correo { get; set; }
         public bool EstadoRegistro { get; set; }

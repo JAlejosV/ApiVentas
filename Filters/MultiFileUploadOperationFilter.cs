@@ -1,4 +1,4 @@
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace ApiVentas.Filters
@@ -18,7 +18,7 @@ namespace ApiVentas.Filters
             if (!tieneListaArchivos) return;
 
             // Reconstruimos el requestBody con el tipo array para los campos List<IFormFile>
-            var properties = new Dictionary<string, OpenApiSchema>();
+            var properties = new Dictionary<string, IOpenApiSchema>();
             var required = new HashSet<string>();
 
             foreach (var param in parameters)
@@ -27,8 +27,8 @@ namespace ApiVentas.Filters
                 {
                     properties[param.Name] = new OpenApiSchema
                     {
-                        Type = "array",
-                        Items = new OpenApiSchema { Type = "string", Format = "binary" },
+                        Type = JsonSchemaType.Array,
+                        Items = new OpenApiSchema { Type = JsonSchemaType.String, Format = "binary" },
                         Description = "Uno o varios archivos .xls / .xlsx"
                     };
                     required.Add(param.Name);
@@ -37,7 +37,7 @@ namespace ApiVentas.Filters
                 {
                     properties[param.Name] = new OpenApiSchema
                     {
-                        Type = "string",
+                        Type = JsonSchemaType.String,
                         Format = "binary",
                         Description = "Archivo .xls / .xlsx"
                     };
@@ -48,12 +48,11 @@ namespace ApiVentas.Filters
                     bool esOpcional = param.HasDefaultValue;
                     properties[param.Name] = new OpenApiSchema
                     {
-                        Type = "number",
+                        Type = esOpcional ? JsonSchemaType.Number | JsonSchemaType.Null : JsonSchemaType.Number,
                         Format = "decimal",
-                        Nullable = esOpcional,
                         Description = "Número decimal (positivo o negativo)",
                         Default = esOpcional
-                            ? new Microsoft.OpenApi.Any.OpenApiDouble(Convert.ToDouble(param.DefaultValue ?? 0))
+                            ? System.Text.Json.Nodes.JsonValue.Create(Convert.ToDouble(param.DefaultValue ?? 0))
                             : null
                     };
                     if (!esOpcional)
@@ -62,13 +61,13 @@ namespace ApiVentas.Filters
                 else if (param.ParameterType == typeof(int) || param.ParameterType == typeof(long) ||
                          param.ParameterType == typeof(double) || param.ParameterType == typeof(float))
                 {
-                    properties[param.Name] = new OpenApiSchema { Type = "number" };
+                    properties[param.Name] = new OpenApiSchema { Type = JsonSchemaType.Number };
                     if (!param.HasDefaultValue)
                         required.Add(param.Name);
                 }
                 else if (param.ParameterType == typeof(string))
                 {
-                    properties[param.Name] = new OpenApiSchema { Type = "string" };
+                    properties[param.Name] = new OpenApiSchema { Type = JsonSchemaType.String };
                     if (!param.HasDefaultValue)
                         required.Add(param.Name);
                 }
@@ -85,7 +84,7 @@ namespace ApiVentas.Filters
                     {
                         Schema = new OpenApiSchema
                         {
-                            Type = "object",
+                            Type = JsonSchemaType.Object,
                             Properties = properties,
                             Required = required
                         }

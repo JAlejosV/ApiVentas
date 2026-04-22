@@ -16,6 +16,25 @@ namespace ApiVentas.Repositorio
             _settings = settings.Value;
         }
 
+        private static Dictionary<string, string> ParseConnectionString(string cs)
+        {
+            return cs.Split(';', StringSplitOptions.RemoveEmptyEntries)
+                     .Select(p => p.Split('=', 2))
+                     .Where(p => p.Length == 2)
+                     .ToDictionary(p => p[0].Trim(), p => p[1].Trim(), StringComparer.OrdinalIgnoreCase);
+        }
+
+        private static string BuildMySqlConnectionString(Dictionary<string, string> parts, string overrideServer = null, uint? overridePort = null)
+        {
+            var builder = new MySqlConnectionStringBuilder();
+            builder.Server   = overrideServer ?? (parts.TryGetValue("Server", out var s) ? s : "127.0.0.1");
+            builder.Port     = overridePort   ?? (parts.TryGetValue("Port", out var p) && uint.TryParse(p, out var portNum) ? portNum : 3306);
+            if (parts.TryGetValue("Database", out var db))  builder.Database = db;
+            if (parts.TryGetValue("Uid", out var uid))      builder.UserID   = uid;
+            if (parts.TryGetValue("Pwd", out var pwd))      builder.Password = pwd;
+            return builder.ToString();
+        }
+
         public async Task<List<ReporteVentaItemDto>> ObtenerReporteVentasAsync(
             string fechaInicio,
             string fechaFin,
@@ -31,31 +50,34 @@ namespace ApiVentas.Repositorio
 
             try
             {
-                // Abrir túnel SSH
-                sshClient = new SshClient(
-                    _settings.SSH.Host,
-                    _settings.SSH.Port,
-                    _settings.SSH.User,
-                    _settings.SSH.Password
-                );
-                sshClient.Connect();
+                var parts = ParseConnectionString(_settings.ConnectionString);
+                bool useSsh = parts.TryGetValue("SshHostName", out var sshHost) && !string.IsNullOrWhiteSpace(sshHost);
 
-                // Reenviar puerto local (0 = OS asigna puerto disponible) → DB remota
-                portForward = new ForwardedPortLocal(
-                    "127.0.0.1", 0,
-                    _settings.Database.Host, (uint)_settings.Database.Port
-                );
-                sshClient.AddForwardedPort(portForward);
-                portForward.Start();
+                string connStr;
 
-                var connStr = new MySqlConnectionStringBuilder
+                if (useSsh)
                 {
-                    Server   = "127.0.0.1",
-                    Port     = portForward.BoundPort,
-                    Database = _settings.Database.Name,
-                    UserID   = _settings.Database.User,
-                    Password = _settings.Database.Password
-                }.ToString();
+                    parts.TryGetValue("SshUserName", out var sshUser);
+                    parts.TryGetValue("SshPassword", out var sshPwd);
+                    int sshPort = parts.TryGetValue("SshPort", out var sshPortStr) && int.TryParse(sshPortStr, out var sp) ? sp : 22;
+
+                    sshClient = new SshClient(sshHost, sshPort, sshUser ?? "", sshPwd ?? "");
+                    sshClient.Connect();
+
+                    parts.TryGetValue("Server", out var dbHost);
+                    uint dbPort = parts.TryGetValue("Port", out var portStr) && uint.TryParse(portStr, out var dp) ? dp : 3306;
+
+                    portForward = new ForwardedPortLocal("127.0.0.1", 0, dbHost ?? "127.0.0.1", dbPort);
+                    sshClient.AddForwardedPort(portForward);
+                    portForward.Start();
+
+                    connStr = BuildMySqlConnectionString(parts, "127.0.0.1", portForward.BoundPort);
+                }
+                else
+                {
+                    // Conexión directa sin túnel SSH (para Railway u otros entornos cloud)
+                    connStr = BuildMySqlConnectionString(parts);
+                }
 
                 connection = new MySqlConnection(connStr);
                 await connection.OpenAsync();

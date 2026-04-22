@@ -13,8 +13,8 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 //Inicio Railway 
-//var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
-//builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
+builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 //Fin Railway
 //Configuramos la conexion a PostgreSQL
 builder.Services.AddDbContext<ApplicationDbContext>(opciones =>

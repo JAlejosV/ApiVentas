@@ -27,8 +27,9 @@ namespace ApiVentas.Repositorio
         private static string BuildMySqlConnectionString(Dictionary<string, string> parts, string overrideServer = null, uint? overridePort = null)
         {
             var builder = new MySqlConnectionStringBuilder();
-            builder.Server   = overrideServer ?? (parts.TryGetValue("Server", out var s) ? s : "127.0.0.1");
-            builder.Port     = overridePort   ?? (parts.TryGetValue("Port", out var p) && uint.TryParse(p, out var portNum) ? portNum : 3306);
+            builder.Server            = overrideServer ?? (parts.TryGetValue("Server", out var s) ? s : "127.0.0.1");
+            builder.Port              = overridePort   ?? (parts.TryGetValue("Port", out var p) && uint.TryParse(p, out var portNum) ? portNum : 3306);
+            builder.ConnectionTimeout = 30;
             if (parts.TryGetValue("Database", out var db))  builder.Database = db;
             if (parts.TryGetValue("Uid", out var uid))      builder.UserID   = uid;
             if (parts.TryGetValue("Pwd", out var pwd))      builder.Password = pwd;
@@ -61,7 +62,13 @@ namespace ApiVentas.Repositorio
                     parts.TryGetValue("SshPassword", out var sshPwd);
                     int sshPort = parts.TryGetValue("SshPort", out var sshPortStr) && int.TryParse(sshPortStr, out var sp) ? sp : 22;
 
-                    sshClient = new SshClient(sshHost, sshPort, sshUser ?? "", sshPwd ?? "");
+                    var authMethod = new Renci.SshNet.PasswordAuthenticationMethod(sshUser ?? "", sshPwd ?? "");
+                    var connInfo   = new Renci.SshNet.ConnectionInfo(sshHost, sshPort, sshUser ?? "", authMethod);
+
+                    sshClient = new SshClient(connInfo);
+                    // En Railway el contenedor es efímero: no existe known_hosts, por lo que
+                    // hay que aceptar la clave del host explícitamente.
+                    sshClient.HostKeyReceived += (_, e) => { e.CanTrust = true; };
                     sshClient.Connect();
 
                     parts.TryGetValue("Server", out var dbHost);

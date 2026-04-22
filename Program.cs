@@ -177,5 +177,9 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
-
+//railway
+app.MapGet("/debug-config", (IConfiguration config) =>
+    config["MariaDb:ConnectionString"] ?? "NOT SET"
+).ExcludeFromDescription();
+//fin
 app.Run();

@@ -114,14 +114,46 @@ builder.Services.AddCors(p => p.AddPolicy("PolicyCors", build =>
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-//Inicio Railway 
-//if (app.Environment.IsDevelopment())
-//{
-app.UseSwagger();
-app.UseSwaggerUI();
-//}
-//Fin Railway 
+// ── Endpoints de diagnóstico (sin autenticación) ─────────────────────────────
+app.MapGet("/debug-config", (IConfiguration config) =>
+    config["MariaDb:ConnectionString"] ?? "NOT SET"
+).ExcludeFromDescription();
+
+app.MapGet("/debug-ssh", async (IConfiguration config) =>
+{
+    var cs = config["MariaDb:ConnectionString"] ?? "";
+    if (string.IsNullOrWhiteSpace(cs))
+        return Results.Ok(new { ok = false, step = "config", error = "MariaDb:ConnectionString no definida" });
+
+    var parts = cs.Split(';', StringSplitOptions.RemoveEmptyEntries)
+                  .Select(p => p.Split('=', 2)).Where(p => p.Length == 2)
+                  .ToDictionary(p => p[0].Trim(), p => p[1].Trim(), StringComparer.OrdinalIgnoreCase);
+
+    if (!parts.TryGetValue("SshHostName", out var sshHost) || string.IsNullOrWhiteSpace(sshHost))
+        return Results.Ok(new { ok = false, step = "config", error = "SshHostName no encontrado en la cadena" });
+
+    parts.TryGetValue("SshUserName", out var sshUser);
+    parts.TryGetValue("SshPassword", out var sshPwd);
+    int sshPort = parts.TryGetValue("SshPort", out var sshPortStr) && int.TryParse(sshPortStr, out var sp) ? sp : 22;
+
+    try
+    {
+        var auth     = new Renci.SshNet.PasswordAuthenticationMethod(sshUser ?? "", sshPwd ?? "");
+        var connInfo = new Renci.SshNet.ConnectionInfo(sshHost, sshPort, sshUser ?? "", auth);
+        using var ssh = new Renci.SshNet.SshClient(connInfo);
+        ssh.HostKeyReceived += (_, e) => { e.CanTrust = true; };
+        ssh.Connect();
+        var connected = ssh.IsConnected;
+        ssh.Disconnect();
+        return Results.Ok(new { ok = connected, step = "ssh", host = sshHost, port = sshPort, user = sshUser });
+    }
+    catch (Exception ex)
+    {
+        return Results.Ok(new { ok = false, step = "ssh", host = sshHost, port = sshPort, error = ex.Message });
+    }
+}).ExcludeFromDescription();
+// ─────────────────────────────────────────────────────────────────────────────
+
 
 //Imagenes Locales
 ////Importante para habilitar que se  exponga el directorio de imagenes
@@ -150,11 +182,10 @@ if (!Directory.Exists(archivosPath))
     Directory.CreateDirectory(archivosPath);
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+//Inicio Railway - Swagger siempre activo
+app.UseSwagger();
+app.UseSwaggerUI();
+//Fin Railway
 
 // ✅ CAMBIO: Usar las variables en lugar de rutas hardcodeadas con @"..."
 app.UseStaticFiles(new StaticFileOptions()
@@ -177,9 +208,4 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
-//railway
-app.MapGet("/debug-config", (IConfiguration config) =>
-    config["MariaDb:ConnectionString"] ?? "NOT SET"
-).ExcludeFromDescription();
-//fin
 app.Run();
